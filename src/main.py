@@ -2156,17 +2156,17 @@ def run_server(port: int = None, host: str = None):
     if ssl_certfile and ssl_keyfile:
         for label, path in (("certificate", ssl_certfile), ("key", ssl_keyfile)):
             if not os.path.isfile(path):
-                raise RuntimeError(f"SSL {label} file not found: {path}")
+                raise RuntimeError(f"SSL {label} file not found: {os.path.basename(path)}")
             if not os.access(path, os.R_OK):
-                raise RuntimeError(f"SSL {label} file is not readable: {path}")
+                raise RuntimeError(f"SSL {label} file is not readable: {os.path.basename(path)}")
         ssl_options = {"ssl_certfile": ssl_certfile, "ssl_keyfile": ssl_keyfile}
         logger.info("SSL enabled via SSL_CERTFILE and SSL_KEYFILE.")
         if os.name != "nt":
             key_mode = os.stat(ssl_keyfile).st_mode
             if key_mode & (stat.S_IRWXG | stat.S_IRWXO):
-                logger.warning(
-                    "SSL key file permissions for %s are too open; restrict access to the owner.",
-                    os.path.basename(ssl_keyfile),
+                raise RuntimeError(
+                    "SSL key file permissions are too open for "
+                    f"{os.path.basename(ssl_keyfile)}; restrict access to the owner."
                 )
         logger.debug(
             "SSL certfile=%s keyfile=%s",
