@@ -1,4 +1,5 @@
 import os
+import stat
 import json
 import asyncio
 import logging
@@ -2160,7 +2161,18 @@ def run_server(port: int = None, host: str = None):
                 raise RuntimeError(f"SSL {label} file is not readable: {path}")
         ssl_options = {"ssl_certfile": ssl_certfile, "ssl_keyfile": ssl_keyfile}
         logger.info("SSL enabled via SSL_CERTFILE and SSL_KEYFILE.")
-        logger.debug("SSL certfile=%s keyfile=%s", ssl_certfile, ssl_keyfile)
+        if os.name != "nt":
+            key_mode = os.stat(ssl_keyfile).st_mode
+            if key_mode & (stat.S_IRWXG | stat.S_IRWXO):
+                logger.warning(
+                    "SSL key file permissions for %s are too open; restrict access to the owner.",
+                    os.path.basename(ssl_keyfile),
+                )
+        logger.debug(
+            "SSL certfile=%s keyfile=%s",
+            os.path.basename(ssl_certfile),
+            os.path.basename(ssl_keyfile),
+        )
     elif ssl_certfile or ssl_keyfile:
         raise RuntimeError(
             "SSL configuration incomplete: both SSL_CERTFILE and SSL_KEYFILE environment "
