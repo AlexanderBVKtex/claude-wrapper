@@ -2159,15 +2159,19 @@ def run_server(port: int = None, host: str = None):
                 raise RuntimeError(f"SSL {label} file not found: {path}")
             if not os.access(path, os.R_OK):
                 raise RuntimeError(f"SSL {label} file is not readable: {path}")
+            if label == "key" and os.name != "nt":
+                key_mode = os.stat(path).st_mode
+                owner_perms = key_mode & stat.S_IRWXU
+                if key_mode & (stat.S_IRWXG | stat.S_IRWXO) or owner_perms not in (
+                    stat.S_IRUSR,
+                    stat.S_IRUSR | stat.S_IWUSR,
+                ):
+                    raise RuntimeError(
+                        "SSL key file permissions must be 0400 or 0600 (owner read/write only): "
+                        f"{path}"
+                    )
         ssl_options = {"ssl_certfile": ssl_certfile, "ssl_keyfile": ssl_keyfile}
         logger.info("SSL enabled via SSL_CERTFILE and SSL_KEYFILE.")
-        if os.name != "nt":
-            key_mode = os.stat(ssl_keyfile).st_mode
-            if key_mode & (stat.S_IRWXG | stat.S_IRWXO):
-                raise RuntimeError(
-                    "SSL key file permissions are too open for "
-                    f"{ssl_keyfile}; restrict access to the owner."
-                )
         logger.debug(
             "SSL certfile=%s keyfile=%s",
             os.path.basename(ssl_certfile),
