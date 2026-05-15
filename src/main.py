@@ -2149,10 +2149,19 @@ def run_server(port: int = None, host: str = None):
         host = os.getenv("CLAUDE_WRAPPER_HOST", "0.0.0.0")  # nosec B104
     preferred_port = port
 
+    ssl_certfile = os.getenv("SSL_CERTFILE")
+    ssl_keyfile = os.getenv("SSL_KEYFILE")
+    ssl_options = {}
+    if ssl_certfile or ssl_keyfile:
+        if not ssl_certfile or not ssl_keyfile:
+            raise RuntimeError("Both SSL_CERTFILE and SSL_KEYFILE must be set to enable SSL.")
+        ssl_options = {"ssl_certfile": ssl_certfile, "ssl_keyfile": ssl_keyfile}
+        logger.info("SSL enabled with certificate from SSL_CERTFILE.")
+
     try:
         # Try the preferred port first
         # Binding to 0.0.0.0 is intentional for container/development use
-        uvicorn.run(app, host=host, port=preferred_port)  # nosec B104
+        uvicorn.run(app, host=host, port=preferred_port, **ssl_options)  # nosec B104
     except OSError as e:
         if "Address already in use" in str(e) or e.errno == 48:
             logger.warning(f"Port {preferred_port} is already in use. Finding alternative port...")
@@ -2162,7 +2171,7 @@ def run_server(port: int = None, host: str = None):
                 print(f"\n🚀 Server starting on http://localhost:{available_port}")
                 print(f"📝 Update your client base_url to: http://localhost:{available_port}/v1")
                 # Binding to 0.0.0.0 is intentional for container/development use
-                uvicorn.run(app, host=host, port=available_port)  # nosec B104
+                uvicorn.run(app, host=host, port=available_port, **ssl_options)  # nosec B104
             except RuntimeError as port_error:
                 logger.error(f"Could not find available port: {port_error}")
                 print(f"\n❌ Error: {port_error}")

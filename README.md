@@ -167,6 +167,10 @@ PORT=8000
 # Timeout in milliseconds
 MAX_TIMEOUT=600000
 
+# SSL certificate configuration (optional)
+# SSL_CERTFILE=/path/to/cert.pem
+# SSL_KEYFILE=/path/to/key.pem
+
 # CORS origins
 CORS_ORIGINS=["*"]
 
@@ -174,6 +178,8 @@ CORS_ORIGINS=["*"]
 # If not set, uses an isolated temporary directory for security
 # CLAUDE_CWD=/path/to/your/workspace
 ```
+
+When `SSL_CERTFILE` and `SSL_KEYFILE` are set, the `claude-wrapper`/`python src/main.py` launcher starts the server with HTTPS enabled.
 
 ### 📁 **Working Directory Configuration**
 

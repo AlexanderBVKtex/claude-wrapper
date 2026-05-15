@@ -41,6 +41,7 @@ logs/
 .coverage
 .pytest_cache/
 htmlcov/
+.hypothesis/
 
 # Claude Code
 .claude/
