@@ -641,6 +641,12 @@ async def generate_streaming_response(
             claude_options["permission_mode"] = "bypassPermissions"
             logger.info(f"Tools enabled by user request: {DEFAULT_ALLOWED_TOOLS}")
 
+        if "permission_mode" not in claude_options:
+            claude_options["permission_mode"] = "bypassPermissions"
+            logger.info(
+                "Permission mode not provided; defaulting to bypassPermissions for API usage"
+            )
+
         # Run Claude Code
         chunks_buffer = []
         role_sent = False  # Track if we've sent the initial role chunk
@@ -902,6 +908,12 @@ async def chat_completions(
                 # Set permission mode to bypass prompts (required for API/headless usage)
                 claude_options["permission_mode"] = "bypassPermissions"
                 logger.info(f"Tools enabled by user request: {DEFAULT_ALLOWED_TOOLS}")
+
+            if "permission_mode" not in claude_options:
+                claude_options["permission_mode"] = "bypassPermissions"
+                logger.info(
+                    "Permission mode not provided; defaulting to bypassPermissions for API usage"
+                )
 
             # Collect all chunks
             chunks = []
