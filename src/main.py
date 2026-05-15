@@ -1,4 +1,5 @@
 import os
+import stat
 import json
 import asyncio
 import logging
@@ -2149,20 +2150,57 @@ def run_server(port: int = None, host: str = None):
         host = os.getenv("CLAUDE_WRAPPER_HOST", "0.0.0.0")  # nosec B104
     preferred_port = port
 
+    ssl_certfile = os.getenv("SSL_CERTFILE")
+    ssl_keyfile = os.getenv("SSL_KEYFILE")
+    ssl_options = {}
+    if ssl_certfile and ssl_keyfile:
+        for label, path in (("certificate", ssl_certfile), ("key", ssl_keyfile)):
+            if not os.path.isfile(path):
+                raise RuntimeError(f"SSL {label} file not found: {path}")
+            if not os.access(path, os.R_OK):
+                raise RuntimeError(f"SSL {label} file is not readable: {path}")
+            if label == "key" and os.name != "nt":
+                key_mode = os.stat(path).st_mode
+                owner_perms = key_mode & stat.S_IRWXU
+                if key_mode & (stat.S_IRWXG | stat.S_IRWXO) or owner_perms not in (
+                    stat.S_IRUSR,
+                    stat.S_IRUSR | stat.S_IWUSR,
+                ):
+                    raise RuntimeError(
+                        "SSL key file permissions must be 0400 or 0600 (owner read/write only): "
+                        f"{path}"
+                    )
+        ssl_options = {"ssl_certfile": ssl_certfile, "ssl_keyfile": ssl_keyfile}
+        logger.info("SSL enabled via SSL_CERTFILE and SSL_KEYFILE.")
+        logger.debug(
+            "SSL certfile=%s keyfile=%s",
+            os.path.basename(ssl_certfile),
+            os.path.basename(ssl_keyfile),
+        )
+    elif ssl_certfile or ssl_keyfile:
+        raise RuntimeError(
+            "SSL configuration incomplete: both SSL_CERTFILE and SSL_KEYFILE environment "
+            "variables must be set together to enable SSL. Either set both variables or "
+            "remove both to run without SSL."
+        )
+
     try:
         # Try the preferred port first
         # Binding to 0.0.0.0 is intentional for container/development use
-        uvicorn.run(app, host=host, port=preferred_port)  # nosec B104
+        uvicorn.run(app, host=host, port=preferred_port, **ssl_options)  # nosec B104
     except OSError as e:
         if "Address already in use" in str(e) or e.errno == 48:
             logger.warning(f"Port {preferred_port} is already in use. Finding alternative port...")
             try:
                 available_port = find_available_port(preferred_port + 1)
                 logger.info(f"Starting server on alternative port {available_port}")
-                print(f"\n🚀 Server starting on http://localhost:{available_port}")
-                print(f"📝 Update your client base_url to: http://localhost:{available_port}/v1")
+                scheme = "https" if ssl_options else "http"
+                print(f"\n🚀 Server starting on {scheme}://localhost:{available_port}")
+                print(
+                    f"📝 Update your client base_url to: {scheme}://localhost:{available_port}/v1"
+                )
                 # Binding to 0.0.0.0 is intentional for container/development use
-                uvicorn.run(app, host=host, port=available_port)  # nosec B104
+                uvicorn.run(app, host=host, port=available_port, **ssl_options)  # nosec B104
             except RuntimeError as port_error:
                 logger.error(f"Could not find available port: {port_error}")
                 print(f"\n❌ Error: {port_error}")
