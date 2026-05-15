@@ -2151,12 +2151,14 @@ def run_server(port: int = None, host: str = None):
 
     ssl_certfile = os.getenv("SSL_CERTFILE")
     ssl_keyfile = os.getenv("SSL_KEYFILE")
+    ssl_enabled = False
     ssl_options = {}
-    if ssl_certfile or ssl_keyfile:
-        if not ssl_certfile or not ssl_keyfile:
-            raise RuntimeError("Both SSL_CERTFILE and SSL_KEYFILE must be set to enable SSL.")
+    if ssl_certfile and ssl_keyfile:
         ssl_options = {"ssl_certfile": ssl_certfile, "ssl_keyfile": ssl_keyfile}
+        ssl_enabled = True
         logger.info("SSL enabled with certificate from SSL_CERTFILE.")
+    elif ssl_certfile or ssl_keyfile:
+        raise RuntimeError("Both SSL_CERTFILE and SSL_KEYFILE must be set to enable SSL.")
 
     try:
         # Try the preferred port first
@@ -2168,8 +2170,11 @@ def run_server(port: int = None, host: str = None):
             try:
                 available_port = find_available_port(preferred_port + 1)
                 logger.info(f"Starting server on alternative port {available_port}")
-                print(f"\n🚀 Server starting on http://localhost:{available_port}")
-                print(f"📝 Update your client base_url to: http://localhost:{available_port}/v1")
+                scheme = "https" if ssl_enabled else "http"
+                print(f"\n🚀 Server starting on {scheme}://localhost:{available_port}")
+                print(
+                    f"📝 Update your client base_url to: {scheme}://localhost:{available_port}/v1"
+                )
                 # Binding to 0.0.0.0 is intentional for container/development use
                 uvicorn.run(app, host=host, port=available_port, **ssl_options)  # nosec B104
             except RuntimeError as port_error:
