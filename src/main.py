@@ -2151,14 +2151,15 @@ def run_server(port: int = None, host: str = None):
 
     ssl_certfile = os.getenv("SSL_CERTFILE")
     ssl_keyfile = os.getenv("SSL_KEYFILE")
-    ssl_enabled = False
     ssl_options = {}
     if ssl_certfile and ssl_keyfile:
         ssl_options = {"ssl_certfile": ssl_certfile, "ssl_keyfile": ssl_keyfile}
-        ssl_enabled = True
-        logger.info("SSL enabled with certificate from SSL_CERTFILE.")
+        logger.info("SSL enabled with certificate and key from SSL_CERTFILE and SSL_KEYFILE.")
     elif ssl_certfile or ssl_keyfile:
-        raise RuntimeError("Both SSL_CERTFILE and SSL_KEYFILE must be set to enable SSL.")
+        raise RuntimeError(
+            "SSL configuration incomplete: both SSL_CERTFILE and SSL_KEYFILE environment "
+            "variables must be set together to enable SSL."
+        )
 
     try:
         # Try the preferred port first
@@ -2170,7 +2171,7 @@ def run_server(port: int = None, host: str = None):
             try:
                 available_port = find_available_port(preferred_port + 1)
                 logger.info(f"Starting server on alternative port {available_port}")
-                scheme = "https" if ssl_enabled else "http"
+                scheme = "https" if ssl_options else "http"
                 print(f"\n🚀 Server starting on {scheme}://localhost:{available_port}")
                 print(
                     f"📝 Update your client base_url to: {scheme}://localhost:{available_port}/v1"
