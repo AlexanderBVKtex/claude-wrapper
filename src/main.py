@@ -2153,12 +2153,19 @@ def run_server(port: int = None, host: str = None):
     ssl_keyfile = os.getenv("SSL_KEYFILE")
     ssl_options = {}
     if ssl_certfile and ssl_keyfile:
+        for label, path in (("certificate", ssl_certfile), ("key", ssl_keyfile)):
+            if not os.path.isfile(path):
+                raise RuntimeError(f"SSL {label} file not found: {path}")
+            if not os.access(path, os.R_OK):
+                raise RuntimeError(f"SSL {label} file is not readable: {path}")
         ssl_options = {"ssl_certfile": ssl_certfile, "ssl_keyfile": ssl_keyfile}
-        logger.info("SSL enabled with certificate and key from SSL_CERTFILE and SSL_KEYFILE.")
+        logger.info("SSL enabled via SSL_CERTFILE and SSL_KEYFILE.")
+        logger.debug("SSL certfile=%s keyfile=%s", ssl_certfile, ssl_keyfile)
     elif ssl_certfile or ssl_keyfile:
         raise RuntimeError(
             "SSL configuration incomplete: both SSL_CERTFILE and SSL_KEYFILE environment "
-            "variables must be set together to enable SSL."
+            "variables must be set together to enable SSL. Either set both variables or "
+            "remove both to run without SSL."
         )
 
     try:
